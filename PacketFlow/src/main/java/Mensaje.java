@@ -34,7 +34,7 @@ public class Mensaje {
     public void Fragmentar(String contenido, int tamaño){
         // calculo paquetes necesarios para el mensaje, ceil redondea para arriba la division
         int CantPaquetes = (int) Math.ceil((double) contenido.length() / tamaño);
-
+        // se encarga de separar el mensaje segun el tamaño
         for(int i = 0; i < CantPaquetes; i++){
             int principio = i * tamaño;
             int fin = Math.min(principio + tamaño, contenido.length());
