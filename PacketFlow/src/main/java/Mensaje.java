@@ -7,7 +7,7 @@ public class Mensaje {
     private Queue <Paquete> paquetes;
     private int prioridad;
 
-    public Mensaje(int idMensaje, int prioridad) {
+    public Mensaje(int idMensaje,String contenido, int prioridad) {
         this.idMensaje = idMensaje;
         this.prioridad = prioridad;
         this.paquetes = new ArrayDeque<>();
@@ -31,13 +31,13 @@ public class Mensaje {
     }
 
     // metodo para separar el mensaje en paquetes
-    public void Fragmentar(String contenido, int tamaño){
+    public void Fragmentar(String contenido, int tamanio){
         // calculo paquetes necesarios para el mensaje, ceil redondea para arriba la division
-        int CantPaquetes = (int) Math.ceil((double) contenido.length() / tamaño);
+        int CantPaquetes = (int) Math.ceil((double) contenido.length() / tamanio);
         // se encarga de separar el mensaje segun el tamaño
         for(int i = 0; i < CantPaquetes; i++){
-            int principio = i * tamaño;
-            int fin = Math.min(principio + tamaño, contenido.length());
+            int principio = i * tamanio;
+            int fin = Math.min(principio + tamanio, contenido.length());
             String frag = contenido.substring(principio, fin);
 
          Paquete paq = new Paquete(
