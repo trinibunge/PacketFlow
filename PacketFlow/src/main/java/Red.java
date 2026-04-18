@@ -1,8 +1,6 @@
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 
-import java.util.LinkedList;
-import java.util.PriorityQueue;
 
 public class Red {
 
@@ -21,6 +19,7 @@ public class Red {
 
     public void crearMensaje(int id, String contenido, int prioridad) {
         Mensaje m = new Mensaje(id, contenido, prioridad);
+        m.fragmentar(contenido, tamanioMaxPaquete);
         mensajes.add(m);
         paquetesEnTransito.addAll(m.getPaquetes());
     }

@@ -1,4 +1,4 @@
-public class Paquete {
+public class Paquete implements Comparable<Paquete> {
     private int idMensaje;
     private int numero;
     private int cantPaquetes;
@@ -32,6 +32,9 @@ public class Paquete {
     public void setEstado(EstadoPaquete estado)        { this.estado       = estado; }
     public void setMensaje(Mensaje mensaje)            { this.mensaje      = mensaje; }
 
-
+    @Override
+    public int compareTo(Paquete otro) {
+        return otro.getMensaje().getPrioridad() - this.getMensaje().getPrioridad();
+    }
 
 }
