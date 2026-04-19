@@ -1,3 +1,5 @@
+package PacketFlow;
+
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 
@@ -70,7 +72,7 @@ public class Red {
         while (!paquetesEnTransito.isEmpty()) {
             Paquete p = paquetesEnTransito.poll();
             p.setEstado(EstadoPaquete.RECIBIDO);
-            System.out.printf("Enviado: Mensaje %d | Paquete %d/%d%n",
+            System.out.printf("Enviado: PacketFlow.Mensaje %d | PacketFlow.Paquete %d/%d%n",
                     p.getIdMensaje(), p.getNumero(), p.getCantPaquetes());
         }
     }
@@ -82,7 +84,7 @@ public class Red {
         }
         Paquete p = paquetesEnTransito.poll();
         p.setEstado(EstadoPaquete.RECIBIDO);
-        System.out.printf("Recibido: Mensaje %d | Paquete %d/%d%n",
+        System.out.printf("Recibido: PacketFlow.Mensaje %d | PacketFlow.Paquete %d/%d%n",
                 p.getIdMensaje(), p.getNumero(), p.getCantPaquetes());
     }
 

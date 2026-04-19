@@ -1,3 +1,5 @@
+package PacketFlow;
+
 public class Paquete implements Comparable<Paquete> {
     private int idMensaje;
     private int numero;
