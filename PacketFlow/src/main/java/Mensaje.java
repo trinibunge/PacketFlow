@@ -36,9 +36,9 @@ public class Mensaje {
     // metodo para separar el mensaje en paquetes
     public void fragmentar(String contenido, int tamanio){
         // calculo paquetes necesarios para el mensaje, ceil redondea para arriba la division
-        int CantPaquetes = (int) Math.ceil((double) contenido.length() / tamanio);
+        int cantPaquetes = (int) Math.ceil((double) contenido.length() / tamanio);
         // se encarga de separar el mensaje segun el tamaño
-        for(int i = 0; i < CantPaquetes; i++){
+        for(int i = 0; i < cantPaquetes; i++){
             int principio = i * tamanio;
             int fin = Math.min(principio + tamanio, contenido.length());
             String frag = contenido.substring(principio, fin);
@@ -46,7 +46,7 @@ public class Mensaje {
          Paquete paq = new Paquete(
                  idMensaje,
                  i + 1,
-                 CantPaquetes,
+                 cantPaquetes,
                  frag,
                  EstadoPaquete.EN_TRANSITO,
                  this
