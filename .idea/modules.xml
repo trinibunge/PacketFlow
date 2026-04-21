@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/PacketFlow.iml" filepath="$PROJECT_DIR$/.idea/PacketFlow.iml" />
+      <module fileurl="file://$PROJECT_DIR$/PacketFlow/PacketFlow.iml" filepath="$PROJECT_DIR$/PacketFlow/PacketFlow.iml" />
     </modules>
   </component>
 </project>

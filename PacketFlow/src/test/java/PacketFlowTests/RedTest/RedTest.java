@@ -1,32 +1,35 @@
-package RedTest;
+package PacketFlowTests.RedTest;
 
 import PacketFlow.Mensaje;
 import PacketFlow.Paquete;
 import PacketFlow.Red;
-import PacketFlow.Reconstructor;
 import PacketFlow.EstadoPaquete;
-import junit.framework.Assert;
-import junit.framework.Test;
-import junit.framework.TestCase;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class RedTest extends TestCase {
-    public void testEliminarMensajeEliminaMensajeyPaquetes(){
+public class RedTest {
+
+    @Test
+    void testEliminarMensajeEliminaMensajeyPaquetes() {
         // objetivo del test: verificar que el metodo "eliminarMensaje", saca el mensaje
-        // de la lista y sus respectivos paquetes de la cola de paquetes en tranisto.
+        // de la lista y sus respectivos paquetes de la cola de paquetes en transito.
         Red red = new Red(2, 10);
-        red.crearMensaje(1,"azucar", 1);
+        red.crearMensaje(1, "azucar", 1);
         red.eliminarMensaje(1);
         assertNull(red.buscarMensaje(1));
         assertEquals(0, red.getEnTransito().size());
     }
-    public void testEliminarMensajeConIdInvalido(){
+
+    @Test
+    void testEliminarMensajeConIdInvalido() {
         // objetivo del test: verificar que no se puede eliminar un mensaje que no existe
         // en la red, y que para manejar el error devuelve false.
         Red red = new Red(2, 10);
         assertFalse(red.eliminarMensaje(1));
-
     }
-    public void testCambioDeEstadoARecibido(){
+
+    @Test
+    void testCambioDeEstadoARecibido() {
         // objetivo del test: verificar que al recibir paquetes, el método cambia su estado
         // a recibido
         Red red = new Red(2, 10);
@@ -36,7 +39,9 @@ public class RedTest extends TestCase {
         Paquete paq = msj.getPaquetes().peek();
         assertEquals(EstadoPaquete.RECIBIDO, paq.getEstado());
     }
-    public void testNoPasaNadaSiNoHayPaquetesRecibidosYLlamoAlMetodo(){
+
+    @Test
+    void testNoPasaNadaSiNoHayPaquetesRecibidosYLlamoAlMetodo() {
         // objetivo del test: verificar que si se llama a recibirPaquete con la cola
         // vacía, el código no explota
         Red red = new Red(2, 10);
