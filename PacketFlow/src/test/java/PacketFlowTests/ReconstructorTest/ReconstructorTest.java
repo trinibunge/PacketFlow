@@ -1,5 +1,9 @@
-package PacketFlow;
+package PacketFlowTests.ReconstructorTest;
 
+import PacketFlow.EstadoPaquete;
+import PacketFlow.Mensaje;
+import PacketFlow.Paquete;
+import PacketFlow.Reconstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.LinkedList;
@@ -20,12 +24,13 @@ class ReconstructorTest {
 
     @Test
     void testSepararDevuelveSoloPaquetesRecibidos() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1, 4);
-        // marcar solo los recibidos
+        Mensaje m = new Mensaje(1, "HolaMundo", 1);
+        m.fragmentar("HolaMundo", 4);
+
         LinkedList<Paquete> paquetes = new LinkedList<>(m.getPaquetes());
         paquetes.get(0).setEstado(EstadoPaquete.RECIBIDO);
         paquetes.get(1).setEstado(EstadoPaquete.RECIBIDO);
-        // el tercero queda EN_TRANSITO
+
         mensajes.add(m);
 
         LinkedList<Paquete> resultado = reconstructor.separarPorMensaje(1, mensajes);
@@ -34,7 +39,9 @@ class ReconstructorTest {
 
     @Test
     void testSepararIdInexistenteDevuelveVacio() {
-        Mensaje m = new Mensaje(1, "Hola", 1, 4);
+        Mensaje m = new Mensaje(1, "Hola", 1);
+        m.fragmentar("Hola", 4);
+
         mensajes.add(m);
 
         LinkedList<Paquete> resultado = reconstructor.separarPorMensaje(99, mensajes);
@@ -43,14 +50,20 @@ class ReconstructorTest {
 
     @Test
     void testSepararNoMezclaOtrosMensajes() {
-        Mensaje m1 = new Mensaje(1, "Hola", 1, 4);
-        Mensaje m2 = new Mensaje(2, "Mundo", 1, 4);
+        Mensaje m1 = new Mensaje(1, "Hola", 1);
+        Mensaje m2 = new Mensaje(2, "Mundo", 1);
+
+        m1.fragmentar("Hola", 4);
+        m2.fragmentar("Mundo", 4);
+
         for (Paquete p : m1.getPaquetes()) p.setEstado(EstadoPaquete.RECIBIDO);
         for (Paquete p : m2.getPaquetes()) p.setEstado(EstadoPaquete.RECIBIDO);
+
         mensajes.add(m1);
         mensajes.add(m2);
 
         LinkedList<Paquete> resultado = reconstructor.separarPorMensaje(1, mensajes);
+
         for (Paquete p : resultado)
             assertEquals(1, p.getIdMensaje());
     }
@@ -59,8 +72,12 @@ class ReconstructorTest {
 
     @Test
     void testEstaCompletoTodosRecibidos() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1, 4);
-        for (Paquete p : m.getPaquetes()) p.setEstado(EstadoPaquete.RECIBIDO);
+        Mensaje m = new Mensaje(1, "HolaMundo", 1);
+        m.fragmentar("HolaMundo", 4);
+
+        for (Paquete p : m.getPaquetes())
+            p.setEstado(EstadoPaquete.RECIBIDO);
+
         mensajes.add(m);
 
         assertTrue(reconstructor.estaCompleto(1, mensajes));
@@ -68,11 +85,13 @@ class ReconstructorTest {
 
     @Test
     void testEstaCompletoFaltaUnPaquete() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1, 4);
+        Mensaje m = new Mensaje(1, "HolaMundo", 1);
+        m.fragmentar("HolaMundo", 4);
+
         LinkedList<Paquete> paquetes = new LinkedList<>(m.getPaquetes());
         paquetes.get(0).setEstado(EstadoPaquete.RECIBIDO);
         paquetes.get(1).setEstado(EstadoPaquete.RECIBIDO);
-        // paquete 3 queda EN_TRANSITO
+
         mensajes.add(m);
 
         assertFalse(reconstructor.estaCompleto(1, mensajes));
@@ -80,8 +99,9 @@ class ReconstructorTest {
 
     @Test
     void testEstaCompletoSinPaquetesRecibidos() {
-        Mensaje m = new Mensaje(1, "Hola", 1, 4);
-        // todos quedan EN_TRANSITO
+        Mensaje m = new Mensaje(1, "Hola", 1);
+        m.fragmentar("Hola", 4);
+
         mensajes.add(m);
 
         assertFalse(reconstructor.estaCompleto(1, mensajes));
@@ -96,8 +116,12 @@ class ReconstructorTest {
 
     @Test
     void testReconstruirOrdenCorrecto() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1, 4);
-        for (Paquete p : m.getPaquetes()) p.setEstado(EstadoPaquete.RECIBIDO);
+        Mensaje m = new Mensaje(1, "HolaMundo", 1);
+        m.fragmentar("HolaMundo", 4);
+
+        for (Paquete p : m.getPaquetes())
+            p.setEstado(EstadoPaquete.RECIBIDO);
+
         mensajes.add(m);
 
         String resultado = reconstructor.reconstruir(1, mensajes);
@@ -106,11 +130,14 @@ class ReconstructorTest {
 
     @Test
     void testReconstruirPaquetesDesordenados() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1, 4);
+        Mensaje m = new Mensaje(1, "HolaMundo", 1);
+        m.fragmentar("HolaMundo", 4);
+
         LinkedList<Paquete> paquetes = new LinkedList<>(m.getPaquetes());
-        // marcar recibidos pero agregar en orden inverso
+
         for (int i = paquetes.size() - 1; i >= 0; i--)
             paquetes.get(i).setEstado(EstadoPaquete.RECIBIDO);
+
         mensajes.add(m);
 
         String resultado = reconstructor.reconstruir(1, mensajes);
@@ -119,10 +146,12 @@ class ReconstructorTest {
 
     @Test
     void testReconstruirIncompleto() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1, 4);
+        Mensaje m = new Mensaje(1, "HolaMundo", 1);
+        m.fragmentar("HolaMundo", 4);
+
         LinkedList<Paquete> paquetes = new LinkedList<>(m.getPaquetes());
         paquetes.get(0).setEstado(EstadoPaquete.RECIBIDO);
-        // faltan los demás
+
         mensajes.add(m);
 
         String resultado = reconstructor.reconstruir(1, mensajes);
@@ -137,8 +166,12 @@ class ReconstructorTest {
 
     @Test
     void testReconstruirUnSoloPaquete() {
-        Mensaje m = new Mensaje(1, "Hola", 1, 100);
-        for (Paquete p : m.getPaquetes()) p.setEstado(EstadoPaquete.RECIBIDO);
+        Mensaje m = new Mensaje(1, "Hola", 1);
+        m.fragmentar("Hola", 100);
+
+        for (Paquete p : m.getPaquetes())
+            p.setEstado(EstadoPaquete.RECIBIDO);
+
         mensajes.add(m);
 
         assertEquals("Hola", reconstructor.reconstruir(1, mensajes));
