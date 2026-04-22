@@ -3,14 +3,39 @@ package PacketFlow;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 
-
+/**
+ * Clase Red
+ *
+ * Representa la red de comunicación que gestiona el envío de mensajes.
+ * Se encarga de fragmentar mensajes en paquetes, mantener una cola de transmisión,
+ * y simular el envío y recepción de paquetes a través de la red.
+ *
+ * Entradas:
+ * - Tamaño máximo de paquete en caracteres
+ * - Capacidad máxima de la red
+ * - Mensajes a enviar
+ *
+ * Salidas:
+ * - Cola de prioridad con paquetes en tránsito
+ * - Lista de mensajes creados
+ * - Estado de la red
+ * - Simulación del envío y recepción de paquetes
+ */
 public class Red {
 
+    // Atributos de red
     private int tamanioMaxPaquete;
     private int capacidadMax;
     private PriorityQueue<Paquete> paquetesEnTransito;
     private LinkedList<Mensaje> mensajes;
 
+    /**
+     * Constructor de la clase Red.
+     * Inicializa los parámetros de la red y las estructuras de datos necesarias.
+     *
+     * @param tamanioMaxPaquete tamaño máximo que puede tener cada paquete en caracteres
+     * @param capacidadMax capacidad máxima de la red
+     */
     public Red(int tamanioMaxPaquete, int capacidadMax) {
         this.tamanioMaxPaquete   = tamanioMaxPaquete;
         this.capacidadMax        = capacidadMax;
@@ -18,7 +43,14 @@ public class Red {
         this.mensajes            = new LinkedList<>();
     }
 
-
+    /**
+     * Crea un nuevo mensaje, lo fragmenta en paquetes según el tamaño máximo permitido,
+     * y agrega los paquetes a la cola de transmisión.
+     *
+     * @param id identificador único del mensaje
+     * @param contenido contenido textual del mensaje a fragmentar
+     * @param prioridad nivel de prioridad del mensaje
+     */
     public void crearMensaje(int id, String contenido, int prioridad) {
         Mensaje m = new Mensaje(id, contenido, prioridad);
         m.fragmentar(contenido, tamanioMaxPaquete);
@@ -26,13 +58,24 @@ public class Red {
         paquetesEnTransito.addAll(m.getPaquetes());
     }
 
-
+    /**
+     * Busca un mensaje en la lista de mensajes por su ID.
+     *
+     * @param id el identificador del mensaje a buscar
+     * @return el mensaje si existe, null en caso contrario
+     */
     public Mensaje buscarMensaje(int id) {
         for (Mensaje m : mensajes)
             if (m.getIdMensaje() == id) return m;
         return null;
     }
 
+    /**
+     * Elimina un mensaje y todos sus paquetes asociados de la red.
+     *
+     * @param id el identificador del mensaje a eliminar
+     * @return true si el mensaje fue eliminado exitosamente, false si no se encontró
+     */
     public boolean eliminarMensaje(int id) {
         Mensaje m = buscarMensaje(id);
         if (m == null) return false;
@@ -41,7 +84,10 @@ public class Red {
         return true;
     }
 
-
+    /**
+     * Muestra el estado actual de la red.
+     * Imprime la cantidad de paquetes en tránsito, recibidos, perdidos y el espacio disponible.
+     */
     public void consultarEstado() {
         int enTransito = 0, recibidos = 0, perdidos = 0;
 
@@ -63,20 +109,25 @@ public class Red {
         System.out.println("Espacio disponible   : " + (capacidadMax - enTransito));
     }
 
-
-
-
-
+    /**
+     * Simula el envío de todos los paquetes en tránsito.
+     * Extrae cada paquete de la cola, marca su estado como RECIBIDO e imprime un reporte.
+     */
     public void enviarPaquetes() {
         System.out.println("=== Enviando paquetes ===");
         while (!paquetesEnTransito.isEmpty()) {
             Paquete p = paquetesEnTransito.poll();
             p.setEstado(EstadoPaquete.RECIBIDO);
-            System.out.printf("Enviado: PacketFlow.Mensaje %d | PacketFlow.Paquete %d/%d%n",
+            System.out.printf("Enviado: Mensaje %d | Paquete %d/%d%n",
                     p.getIdMensaje(), p.getNumero(), p.getCantPaquetes());
         }
     }
 
+    /**
+     * Simula la recepción de un paquete de la cola de transmisión.
+     * Extrae un paquete, marca su estado como RECIBIDO e imprime un reporte.
+     * Si no hay paquetes en tránsito, muestra un mensaje informativo.
+     */
     public void recibirPaquete() {
         if (paquetesEnTransito.isEmpty()) {
             System.out.println("No hay paquetes en tránsito.");
@@ -84,13 +135,39 @@ public class Red {
         }
         Paquete p = paquetesEnTransito.poll();
         p.setEstado(EstadoPaquete.RECIBIDO);
-        System.out.printf("Recibido: PacketFlow.Mensaje %d | PacketFlow.Paquete %d/%d%n",
+        System.out.printf("Recibido: Mensaje %d | Paquete %d/%d%n",
                 p.getIdMensaje(), p.getNumero(), p.getCantPaquetes());
     }
 
+    /**
+     * Obtiene el tamaño máximo permitido para cada paquete.
+     * @return el tamaño máximo de paquete en caracteres
+     */
+    public int getTamanioMaxPaquete() {
+        return tamanioMaxPaquete;
+    }
 
-    public int getTamanioMaxPaquete()              { return tamanioMaxPaquete; }
-    public int getCapacidadMax()                   { return capacidadMax; }
-    public PriorityQueue<Paquete> getEnTransito()  { return paquetesEnTransito; }
-    public LinkedList<Mensaje> getMensajes()        { return mensajes; }
+    /**
+     * Obtiene la capacidad máxima de la red.
+     * @return la capacidad máxima (número máximo de paquetes simultáneos)
+     */
+    public int getCapacidadMax() {
+        return capacidadMax;
+    }
+
+    /**
+     * Obtiene la cola de paquetes en tránsito.
+     * @return PriorityQueue con los paquetes esperando ser enviados
+     */
+    public PriorityQueue<Paquete> getEnTransito() {
+        return paquetesEnTransito;
+    }
+
+    /**
+     * Obtiene la lista de todos los mensajes creados en la red.
+     * @return LinkedList con los mensajes y sus paquetes
+     */
+    public LinkedList<Mensaje> getMensajes() {
+        return mensajes;
+    }
 }
