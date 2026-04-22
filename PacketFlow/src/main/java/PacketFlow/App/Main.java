@@ -1,4 +1,6 @@
-package PacketFlow;
+package PacketFlow.App;
+
+import PacketFlow.*;
 
 import java.util.Scanner;
 import java.io.BufferedReader;
