@@ -82,7 +82,7 @@ public class Reconstructor {
         LinkedList<Paquete> resultado = separarPorMensaje(id, mensajes);
 
         if (resultado.isEmpty() || resultado.size() != resultado.get(0).getCantPaquetes()) {
-            return "No se puede reconstruir el mensaje, no estan todos los paquetes, mensaje: " + id;
+            return "No se puede reconstruir el mensaje ";
         }
 
         // Ordena los paquetes por número usando una PriorityQueue
