@@ -46,16 +46,35 @@ public class Red {
     /**
      * Crea un nuevo mensaje, lo fragmenta en paquetes según el tamaño máximo permitido,
      * y agrega los paquetes a la cola de transmisión.
+     * Valida que la red tenga capacidad suficiente antes de crear el mensaje.
      *
      * @param id identificador único del mensaje
      * @param contenido contenido textual del mensaje a fragmentar
      * @param prioridad nivel de prioridad del mensaje
+     * @return true si el mensaje fue creado exitosamente, false si no hay capacidad
      */
-    public void crearMensaje(int id, String contenido, int prioridad) {
+    public boolean crearMensaje(int id, String contenido, int prioridad) {
+        // Calcular cuántos paquetes se generarían
+        int paquetesNecesarios = (int) Math.ceil((double) contenido.length() / tamanioMaxPaquete);
+
+        // Validar capacidad de la red
+        if (paquetesEnTransito.size() + paquetesNecesarios > capacidadMax) {
+            return false;
+        }
+
         Mensaje m = new Mensaje(id, contenido, prioridad);
         m.fragmentar(contenido, tamanioMaxPaquete);
         mensajes.add(m);
         paquetesEnTransito.addAll(m.getPaquetes());
+        return true;
+    }
+
+    /**
+     * Calcula el espacio disponible en la red (paquetes que aún se pueden agregar).
+     * @return cantidad de paquetes que aún caben en la red
+     */
+    public int espacioDisponible() {
+        return capacidadMax - paquetesEnTransito.size();
     }
 
     /**

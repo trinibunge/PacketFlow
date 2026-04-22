@@ -23,6 +23,7 @@ import java.util.LinkedList;
  * - IDs de mensajes deben ser > 0 y únicos
  * - Prioridad debe estar entre 1 y 3 (1 = más prioritario, 3 = menos prioritario)
  * - Contenido no puede estar vacío
+ * - La red no puede saturarse (se valida capacidad antes de crear mensajes)
  */
 public class Main {
     private static Red red;
@@ -172,7 +173,7 @@ public class Main {
 
     /**
      * Crea un mensaje manualmente solicitando datos al usuario.
-     * Valida ID, prioridad y contenido no vacío.
+     * Valida ID, prioridad, contenido no vacío y capacidad de la red.
      */
     private static void crearMensajeManual(Scanner scanner) {
         System.out.println("\nCrear Mensaje\n");
@@ -191,7 +192,6 @@ public class Main {
                 "Prioridad (recuerda que 1 es lo más prioritario, 3 es lo menos prioritario): ",
                 PRIORIDAD_MIN, PRIORIDAD_MAX);
 
-        // Validar contenido: no puede estar vacío
         String contenido;
         while (true) {
             System.out.print("Contenido del mensaje: ");
@@ -203,7 +203,14 @@ public class Main {
         }
 
         try {
-            red.crearMensaje(id, contenido, prioridad);
+            boolean creado = red.crearMensaje(id, contenido, prioridad);
+            if (!creado) {
+                int paquetesNecesarios = (int) Math.ceil((double) contenido.length() / red.getTamanioMaxPaquete());
+                System.out.println("Error: La red no tiene capacidad suficiente.");
+                System.out.println("  Paquetes necesarios: " + paquetesNecesarios);
+                System.out.println("  Espacio disponible:  " + red.espacioDisponible());
+                return;
+            }
             System.out.println("Mensaje creado y fragmentado correctamente.");
             System.out.println("  Paquetes generados: " + red.getMensajes().getLast().getPaquetes().size());
         } catch (Exception e) {
@@ -249,7 +256,7 @@ public class Main {
         for (Paquete p : m.getPaquetes()) {
             if (p.getEstado() == EstadoPaquete.EN_TRANSITO) {
                 p.setEstado(EstadoPaquete.RECIBIDO);
-                red.getEnTransito().remove(p); // sincronizar la cola en tránsito
+                red.getEnTransito().remove(p);
                 System.out.printf("Enviado: Paquete %d/%d%n", p.getNumero(), p.getCantPaquetes());
                 enviados++;
             }
@@ -293,11 +300,6 @@ public class Main {
         String resultado = reconstructor.reconstruir(id, red.getMensajes());
         System.out.println("\nMensaje reconstruido:");
         System.out.println(resultado);
-
-        if (reconstructor.estaCompleto(id, red.getMensajes())) {
-            red.eliminarMensaje(id);
-            System.out.println("\nEl mensaje fue eliminado de la red tras su exitosa reconstruccion :))");
-        }
     }
 
     /**
@@ -338,6 +340,7 @@ public class Main {
      * - ID positivo y único
      * - Prioridad entre 1 y 3
      * - Contenido no vacío
+     * - Capacidad de la red
      */
     private static void cargarCSV(Scanner scanner) {
         System.out.println("\nCargar archivo\n");
@@ -375,32 +378,37 @@ public class Main {
                     int prioridad = Integer.parseInt(partes[2].trim());
 
                     if (id <= 0) {
-                        System.out.println("Línea " + numeroLinea + " ignorada (ID debe ser > 0): " + linea);
+                        System.out.println("Línea " + numeroLinea + " ignorada ID invalido: " + linea);
                         contadorIgnorados++;
                         continue;
                     }
                     if (red.buscarMensaje(id) != null) {
-                        System.out.println("Línea " + numeroLinea + " ignorada (ID " + id + " ya existe): " + linea);
+                        System.out.println("Línea " + numeroLinea + " ignorada el ID " + id + " ya existe con otro mensaje en la red: " + linea);
                         contadorIgnorados++;
                         continue;
                     }
                     if (contenido.isEmpty()) {
-                        System.out.println("Línea " + numeroLinea + " ignorada (contenido vacío): " + linea);
+                        System.out.println("Línea " + numeroLinea + " ignorada motivo: contevido vacio : " + linea);
                         contadorIgnorados++;
                         continue;
                     }
                     if (prioridad < PRIORIDAD_MIN || prioridad > PRIORIDAD_MAX) {
-                        System.out.println("Línea " + numeroLinea + " ignorada (prioridad debe estar entre "
+                        System.out.println("Línea " + numeroLinea + " ignorada motivo: la prioridad debe estar entre  "
                                 + PRIORIDAD_MIN + " y " + PRIORIDAD_MAX + "): " + linea);
                         contadorIgnorados++;
                         continue;
                     }
 
-                    red.crearMensaje(id, contenido, prioridad);
+                    boolean creado = red.crearMensaje(id, contenido, prioridad);
+                    if (!creado) {
+                        System.out.println("Línea " + numeroLinea + " ignorada motivo: red sin capacidad suficiente: " + linea);
+                        contadorIgnorados++;
+                        continue;
+                    }
                     contadorCargados++;
 
                 } catch (NumberFormatException e) {
-                    System.out.println("Línea " + numeroLinea + " ignorada (ID o prioridad no son números): " + linea);
+                    System.out.println("Línea " + numeroLinea + " ignorada, motivo: ID o prioridad no son números: " + linea);
                     contadorIgnorados++;
                 }
             }
