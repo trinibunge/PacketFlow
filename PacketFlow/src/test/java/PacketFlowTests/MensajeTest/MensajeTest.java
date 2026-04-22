@@ -6,28 +6,50 @@ import PacketFlow.Red;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Clase MensajeTest
+ *
+ * tests para validar la correcta fragmentación de mensajes en paquetes.
+ * Verifica que los mensajes se dividan correctamente según el tamaño máximo de paquete,
+ * que cada paquete mantenga su ID de mensaje, y que se cumplan casos bordes.
+ *
+ * Casos probados:
+ * - Fragmentación normal de mensajes
+ * - Identificación correcta de paquetes
+ * - Caso borde: fragmentación máxima
+ * - Caso borde: un solo paquete
+ * - Verificación de orden y propiedades de paquetes
+ */
 public class MensajeTest {
 
+    /**
+     * Test: Fragmentación Correcta
+     *
+     * Objetivo del test: verificar que la fragmentación divide correctamente
+     * el mensaje en paquetes según el tamaño máximo permitido.
+     *
+     * Validaciones:
+     * - Cantidad correcta de paquetes generados
+     * - Espacio disponible en la red después de la fragmentación
+     * - Cada paquete respeta el tamaño máximo
+     * - Múltiples mensajes se fragmentan independientemente
+     */
     @Test
     void testFragmentacionCorrecta() {
         Red red = new Red(2, 10);
         red.crearMensaje(1, "hola", 1);
         Mensaje msj = red.buscarMensaje(1);
 
-        // control de cantidad de paquetes
         assertEquals(2, msj.getPaquetes().size());
 
-        // validamos que la cantidad de disponibles sea la adecuada
         int espacioDisponible = red.getCapacidadMax() - red.getEnTransito().size();
 
         assertEquals(8, espacioDisponible);
 
-        // control del largo de cada paquete
         for (Paquete p : msj.getPaquetes()) {
             assertTrue(p.getContenido().length() <= red.getTamanioMaxPaquete());
         }
 
-        // creamos otro mensaje
         red.crearMensaje(2, "todobien", 1);
         Mensaje newMsj = red.buscarMensaje(2);
 
@@ -37,8 +59,18 @@ public class MensajeTest {
         red.consultarEstado();
     }
 
+    /**
+     * Test: Todos Mismo ID Un Solo Paquete
+     *
+     * Objetivo del test: verificar que todos los paquetes de un mensaje
+     * tienen el mismo ID de mensaje.
+     *
+     * Validaciones:
+     * - Cada paquete tiene el ID correcto del mensaje
+     */
     @Test
     void testTodosMismoIdUnSoloPaquete() {
+
         Red red = new Red(2, 10);
         red.crearMensaje(1, "test", 1);
         Mensaje msj = red.buscarMensaje(1);
@@ -49,6 +81,16 @@ public class MensajeTest {
         }
     }
 
+    /**
+     * Test: Mismo ID Varios Paquetes
+     *
+     * Objetivo del test: verificar que múltiples mensajes mantienen su ID
+     * en cada uno de sus paquetes de forma independiente.
+     *
+     * Validaciones:
+     * - Cada paquete de cada mensaje tiene el ID correspondiente
+     * - No hay confusión de IDs entre mensajes diferentes
+     */
     @Test
     void testMismoIdVariosPaquetes() {
         Red red = new Red(2, 50);
@@ -67,13 +109,20 @@ public class MensajeTest {
 
     // CASOS BORDES
 
+    /**
+     * Test: Fragmentación Máxima
+     *
+     * Objetivo del test: verificar que cuando cada carácter es un paquete
+     * la fragmentación se realiza correctamente.
+     *
+     * Validaciones:
+     * - Cantidad de paquetes = tamaño del mensaje
+     * - Cada paquete tiene exactamente 1 carácter
+     * - Todos los paquetes mantienen el ID del mensaje
+     * - Cada paquete conoce la cantidad total de paquetes
+     */
     @Test
     void testFragmentacionMaxima() {
-        // caso en que cada caracter es un paquete
-        // verificar:
-        // -cantidad de paquetes = tamaño del mensaje
-        // -cada paquete tiene 1 carácter
-        // -todos mantienen el ID del mensaje
 
         Red red = new Red(1, 10);
         red.crearMensaje(1, "paquetesd1", 1);
@@ -86,13 +135,18 @@ public class MensajeTest {
         }
     }
 
+    /**
+     * Test: Mensaje Un Solo Paquete (CASO BORDE)
+     *
+     * Objetivo del test: verificar que cuando el mensaje cabe completamente
+     * en un paquete, no se fragmenta y se mantiene intacto.
+     *
+     * Validaciones:
+     * - Cantidad de paquetes = 1
+     * - El contenido del paquete es igual al contenido original del mensaje
+     */
     @Test
     void testMensajeUnSoloPaquete() {
-        // caso en que el mensaje entra en un solo paquete
-        // verificar:
-        // -cantidad de paquetes = 1
-        // -el contenido del paquete = contenido original
-
         Red red = new Red(10, 10);
         red.crearMensaje(1, "test", 1);
         Mensaje msj = red.buscarMensaje(1);
@@ -100,16 +154,21 @@ public class MensajeTest {
         assertEquals("test", msj.getPaquetes().peek().getContenido()); // contenido del paquete igual que el msj original
     }
 
+    /**
+     * Test: Fragmentación Y Orden Correcto
+     *
+     * Objetivo del test: verificar que la fragmentación mantiene el orden
+     * correcto de los paquetes y todas sus propiedades son consistentes.
+     *
+     * Validaciones:
+     * - Cantidad correcta de paquetes generados
+     * - Tamaño de cada paquete <= tamaño máximo permitido
+     * - Orden secuencial de paquetes (1, 2, 3, ...)
+     * - Todos los paquetes tienen el mismo idMensaje
+     * - Cada paquete conoce la cantidad total de paquetes del mensaje
+     */
     @Test
     void testFragmentacionYOrdenCorrecto() {
-        // Caso normal:
-        // VERIFICAR:
-        // - cantidad correcta de paquetes
-        // - tamaño de cada paquete <= tamaño máximo
-        // - orden de los paquetes (1,2,3,...)
-        // - todos los paquetes tienen el mismo idMensaje
-        // - cada paquete conoce la cantidad total de paquetes
-
         Red red = new Red(3, 30);
         red.crearMensaje(1, "TesteandoQueEstenEnOrden", 1);
         Mensaje msj = red.buscarMensaje(1);
