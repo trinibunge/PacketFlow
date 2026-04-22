@@ -17,11 +17,21 @@ import java.util.LinkedList;
  * - Enviar y recibir paquetes
  * - Reconstruir mensajes
  * - Consultar estado de la red
+ *
+ * Reglas de validación:
+ * - Tamaño máximo de paquete y capacidad de red deben ser > 0
+ * - IDs de mensajes deben ser > 0 y únicos
+ * - Prioridad debe estar entre 1 y 3 (1 = más prioritario, 3 = menos prioritario)
+ * - Contenido no puede estar vacío
  */
 public class Main {
     private static Red red;
     private static Scanner sc;
     private static Reconstructor reconstructor;
+
+    // Constantes de validación
+    private static final int PRIORIDAD_MIN = 1;
+    private static final int PRIORIDAD_MAX = 3;
 
     public static void main(String[] args) {
         sc = new Scanner(System.in);
@@ -62,7 +72,7 @@ public class Main {
                     System.out.println("\nGracias por elegir PacketFlow, Nos vemos pronto!\n");
                     break;
                 default:
-                    System.out.println(" Opción inválida. Intenta de nuevo.");
+                    System.out.println("Opción inválida. Intenta de nuevo.");
             }
         } while (opcion != 8);
 
@@ -71,16 +81,18 @@ public class Main {
 
     /**
      * Inicializa la red solicitando capacidad y tamaño máximo de paquete.
+     * Valida que ambos valores sean enteros positivos
      */
     private static void inicializarRed(Scanner scanner) {
-        System.out.println("\n!Bienvenido a PacketFlow¡ Necesitamos que inicialize la red para comenzar la prueba. \n");
-        System.out.print("Primero, seleccione la capacidad máxima de caracteres que puede contener cada paquete: ");
-        int tamanioMax = scanner.nextInt();
+        System.out.println("\n!Bienvenido a PacketFlow¡ Necesitamos que inicialize la red para comenzar la prueba.\n");
 
-        System.out.print("Ahora, seleccione la capacidad maxima de paquetes de la red: ");
-        int capacidadMax = scanner.nextInt();
+        int tamanioMax = leerEnteroPositivo(scanner,
+                "Primero, seleccione la capacidad máxima de caracteres que puede contener cada paquete: ",
+                "El tamaño debe ser un número entero mayor a 0.");
 
-        scanner.nextLine();
+        int capacidadMax = leerEnteroPositivo(scanner,
+                "Ahora, seleccione la capacidad maxima de paquetes de la red: ",
+                "La capacidad debe ser un número entero mayor a 0.");
 
         red = new Red(tamanioMax, capacidadMax);
         System.out.println("\n!Felicitaciones¡ La red fue implementada correctamente.\n");
@@ -117,24 +129,82 @@ public class Main {
     }
 
     /**
+     * Lee un entero positivo del scanner, validando hasta que el usuario ingrese un valor válido.
+     */
+    private static int leerEnteroPositivo(Scanner scanner, String prompt, String mensajeError) {
+        int valor;
+        while (true) {
+            System.out.print(prompt);
+            try {
+                valor = scanner.nextInt();
+                scanner.nextLine();
+                if (valor > 0) {
+                    return valor;
+                }
+                System.out.println("Error: " + mensajeError);
+            } catch (java.util.InputMismatchException e) {
+                System.out.println("Error: Debe ingresar un número válido.");
+                scanner.nextLine();
+            }
+        }
+    }
+
+    /**
+     * Lee un entero dentro de un rango, validando hasta que el usuario ingrese un valor válido.
+     */
+    private static int leerEnteroEnRango(Scanner scanner, String prompt, int min, int max) {
+        int valor;
+        while (true) {
+            System.out.print(prompt);
+            try {
+                valor = scanner.nextInt();
+                scanner.nextLine();
+                if (valor >= min && valor <= max) {
+                    return valor;
+                }
+                System.out.println("Error: El valor debe estar entre " + min + " y " + max + ".");
+            } catch (java.util.InputMismatchException e) {
+                System.out.println("Error: Debe ingresar un número válido.");
+                scanner.nextLine();
+            }
+        }
+    }
+
+    /**
      * Crea un mensaje manualmente solicitando datos al usuario.
+     * Valida ID, prioridad y contenido no vacío.
      */
     private static void crearMensajeManual(Scanner scanner) {
-        System.out.println("\nCrear Mensaje \n");
-        System.out.print("ID del mensaje: ");
-        int id = scanner.nextInt();
+        System.out.println("\nCrear Mensaje\n");
 
-        System.out.print("Prioridad: ");
-        int prioridad = scanner.nextInt();
+        int id;
+        while (true) {
+            id = leerEnteroPositivo(scanner, "ID del mensaje: ",
+                    "El ID debe ser un número entero mayor a 0.");
+            if (red.buscarMensaje(id) != null) {
+                System.out.println("Error: Ya existe un mensaje con ID " + id + ". Use otro ID.");
+            } else {
+                break;
+            }
+        }
+        int prioridad = leerEnteroEnRango(scanner,
+                "Prioridad (recuerda que 1 es lo más prioritario, 3 es lo menos prioritario): ",
+                PRIORIDAD_MIN, PRIORIDAD_MAX);
 
-        scanner.nextLine();
-
-        System.out.print("Contenido del mensaje: ");
-        String contenido = scanner.nextLine();
+        // Validar contenido: no puede estar vacío
+        String contenido;
+        while (true) {
+            System.out.print("Contenido del mensaje: ");
+            contenido = scanner.nextLine();
+            if (contenido != null && !contenido.trim().isEmpty()) {
+                break;
+            }
+            System.out.println("Error: El contenido no puede estar vacío.");
+        }
 
         try {
             red.crearMensaje(id, contenido, prioridad);
-            System.out.println(" Mensaje creado y fragmentado correctamente.");
+            System.out.println("Mensaje creado y fragmentado correctamente.");
             System.out.println("  Paquetes generados: " + red.getMensajes().getLast().getPaquetes().size());
         } catch (Exception e) {
             System.out.println("Error al crear el mensaje: " + e.getMessage());
@@ -146,21 +216,31 @@ public class Main {
      */
     private static void enviarPaquetes() {
         System.out.println();
+        if (red.getEnTransito().isEmpty()) {
+            System.out.println("No hay paquetes en tránsito para enviar.");
+            return;
+        }
         red.enviarPaquetes();
     }
 
     /**
      * Envía paquetes de un mensaje específico.
+     * Valida que el mensaje exista antes de proceder.
      */
     private static void enviarPaquetesDeMensaje(Scanner scanner) {
         System.out.println("\nEnviar paquetes de un mensaje\n");
-        System.out.print("ID del mensaje: ");
-        int id = scanner.nextInt();
-        scanner.nextLine();
+
+        if (red.getMensajes().isEmpty()) {
+            System.out.println("Error: No hay mensajes en la red.");
+            return;
+        }
+
+        int id = leerEnteroPositivo(scanner, "ID del mensaje: ",
+                "El ID debe ser un número entero mayor a 0.");
 
         Mensaje m = red.buscarMensaje(id);
         if (m == null) {
-            System.out.println("Error: Mensaje no encontrado.");
+            System.out.println("Error: Mensaje con ID " + id + " no encontrado.");
             return;
         }
 
@@ -169,11 +249,17 @@ public class Main {
         for (Paquete p : m.getPaquetes()) {
             if (p.getEstado() == EstadoPaquete.EN_TRANSITO) {
                 p.setEstado(EstadoPaquete.RECIBIDO);
+                red.getEnTransito().remove(p); // sincronizar la cola en tránsito
                 System.out.printf("Enviado: Paquete %d/%d%n", p.getNumero(), p.getCantPaquetes());
                 enviados++;
             }
         }
-        System.out.println("Total enviados: " + enviados + " paquetes.\n");
+
+        if (enviados == 0) {
+            System.out.println("No habían paquetes en tránsito de este mensaje.");
+        } else {
+            System.out.println("Total enviados: " + enviados + " paquetes.\n");
+        }
     }
 
     /**
@@ -186,16 +272,32 @@ public class Main {
 
     /**
      * Reconstruye un mensaje a partir de los paquetes recibidos.
+     * Valida que el mensaje exista antes de intentar reconstruirlo.
      */
     private static void reconstruirMensaje(Scanner scanner) {
         System.out.println("\nReconstruir Mensaje\n");
-        System.out.print("ID del mensaje a reconstruir: ");
-        int id = scanner.nextInt();
-        scanner.nextLine();
+
+        if (red.getMensajes().isEmpty()) {
+            System.out.println("Error: No hay mensajes en la red.");
+            return;
+        }
+
+        int id = leerEnteroPositivo(scanner, "ID del mensaje a reconstruir: ",
+                "El ID es invalido, ingrese un número entero mayor a 0 la proxima.");
+
+        if (red.buscarMensaje(id) == null) {
+            System.out.println("Error: Mensaje con ID " + id + " no encontrado.");
+            return;
+        }
 
         String resultado = reconstructor.reconstruir(id, red.getMensajes());
         System.out.println("\nMensaje reconstruido:");
         System.out.println(resultado);
+
+        if (reconstructor.estaCompleto(id, red.getMensajes())) {
+            red.eliminarMensaje(id);
+            System.out.println("\nEl mensaje fue eliminado de la red tras su exitosa reconstruccion :))");
+        }
     }
 
     /**
@@ -232,30 +334,39 @@ public class Main {
     /**
      * Carga mensajes desde un archivo CSV.
      * Formato esperado: ID,CONTENIDO,PRIORIDAD
-     * Ejemplo:
-     * 1,Hola mundo,1
-     * 2,Comida,3
+     * Aplica las mismas validaciones que la creación manual:
+     * - ID positivo y único
+     * - Prioridad entre 1 y 3
+     * - Contenido no vacío
      */
     private static void cargarCSV(Scanner scanner) {
-        System.out.println("\n Cargar archivo\n");
+        System.out.println("\nCargar archivo\n");
         System.out.print("Ruta del archivo CSV: ");
         String rutaArchivo = scanner.nextLine();
+
+        if (rutaArchivo == null || rutaArchivo.trim().isEmpty()) {
+            System.out.println("Error: Debe ingresar una ruta válida.");
+            return;
+        }
 
         try (BufferedReader br = new BufferedReader(new FileReader(rutaArchivo))) {
             String linea;
             int contadorCargados = 0;
+            int contadorIgnorados = 0;
+            int numeroLinea = 0;
 
             while ((linea = br.readLine()) != null) {
+                numeroLinea++;
 
                 if (linea.trim().isEmpty() || linea.startsWith("ID")) {
                     continue;
                 }
 
                 try {
-
-                    String[] partes = linea.split(",", 3); // máximo 3 partes
+                    String[] partes = linea.split(",", 3);
                     if (partes.length != 3) {
-                        System.out.println("Línea ignorada: " + linea);
+                        System.out.println("Línea " + numeroLinea + " ignorada, tiene formato no valido: " + linea);
+                        contadorIgnorados++;
                         continue;
                     }
 
@@ -263,15 +374,40 @@ public class Main {
                     String contenido = partes[1].trim();
                     int prioridad = Integer.parseInt(partes[2].trim());
 
+                    if (id <= 0) {
+                        System.out.println("Línea " + numeroLinea + " ignorada (ID debe ser > 0): " + linea);
+                        contadorIgnorados++;
+                        continue;
+                    }
+                    if (red.buscarMensaje(id) != null) {
+                        System.out.println("Línea " + numeroLinea + " ignorada (ID " + id + " ya existe): " + linea);
+                        contadorIgnorados++;
+                        continue;
+                    }
+                    if (contenido.isEmpty()) {
+                        System.out.println("Línea " + numeroLinea + " ignorada (contenido vacío): " + linea);
+                        contadorIgnorados++;
+                        continue;
+                    }
+                    if (prioridad < PRIORIDAD_MIN || prioridad > PRIORIDAD_MAX) {
+                        System.out.println("Línea " + numeroLinea + " ignorada (prioridad debe estar entre "
+                                + PRIORIDAD_MIN + " y " + PRIORIDAD_MAX + "): " + linea);
+                        contadorIgnorados++;
+                        continue;
+                    }
+
                     red.crearMensaje(id, contenido, prioridad);
                     contadorCargados++;
 
                 } catch (NumberFormatException e) {
-                    System.out.println("Linea ignorada: " + linea);
+                    System.out.println("Línea " + numeroLinea + " ignorada (ID o prioridad no son números): " + linea);
+                    contadorIgnorados++;
                 }
             }
 
-            System.out.println("Se cargaron " + contadorCargados + " mensajes.");
+            System.out.println("\nResumen:");
+            System.out.println("  Mensajes cargados: " + contadorCargados);
+            System.out.println("  Líneas ignoradas: " + contadorIgnorados);
 
         } catch (IOException e) {
             System.out.println("Error al leer el archivo: " + e.getMessage());
