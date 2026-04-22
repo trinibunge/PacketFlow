@@ -9,7 +9,6 @@ public enum EstadoPaquete {
      * en la red de comunicación.
      *
      * Utilizar un enum proporciona varias ventajas:
-     * - Seguridad de tipos: previene valores inválidos o typos
      * - Claridad: los estados válidos están explícitamente definidos
      * - Mantenibilidad: fácil de extender con nuevos estados si es necesario
      * - Comparación directa: uso de "==" en lugar de comparación de strings
