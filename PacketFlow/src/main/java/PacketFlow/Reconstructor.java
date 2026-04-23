@@ -9,14 +9,14 @@ import java.util.PriorityQueue;
  * Responsable de reconstruir mensajes originales a partir de paquetes recibidos tras pasar por la red.
  * Verifica integridad, completitud y ordena los paquetes para recrear el mensaje original.
  *
- * Entradas:
- * - ID del mensaje a reconstruir
- * - Lista de mensajes que contienen los paquetes recibidos
+ * Política de reconstrucción:
+ * - Solo se reconstruyen mensajes COMPLETOS (todos sus paquetes recibidos).
+ * - Al reconstruir exitosamente, el mensaje se elimina de la red automáticamente.
  *
  * Salidas:
- * - Mensaje reconstruido o mensaje de error si no pudo
- * - Validación de si el mensaje está completo (true) o no (false)
- * - Paquetes filtrados por ID de mensaje
+ * - Mensaje reconstruido o null si no se pudo
+ * - Validación de si un mensaje está completo
+ * - Mensajes ordenados por prioridad
  */
 public class Reconstructor {
 
@@ -29,7 +29,6 @@ public class Reconstructor {
      * @return lista de paquetes recibidos del mensaje especificado
      */
     public LinkedList<Paquete> separarPorMensaje(int id, LinkedList<Mensaje> mensajes) {
-        // objetivo del método: filtrar los paquetes de un mensaje en base a su ID
         LinkedList<Paquete> resultado = new LinkedList<>();
 
         for (int i = 0; i < mensajes.size(); i++) {
@@ -57,33 +56,46 @@ public class Reconstructor {
         LinkedList<Paquete> resultado = separarPorMensaje(id, mensajes);
 
         if (resultado.isEmpty()) {
-            // si no hay paquetes para el mensaje, no está completo
             return false;
         }
         else if (resultado.size() == resultado.get(0).getCantPaquetes()) {
-            // si la cantidad de paquetes coincide con el atributo cantPaquetes, está completo
             return true;
         }
         else {
-            // si no coincide, está incompleto
             return false;
         }
     }
 
     /**
-     * Reconstruye un mensaje a partir de los paquetes recibidos.
-     * Verifica que todos los paquetes estén presentes antes de reconstruir.
+     * Devuelve los mensajes ordenados por prioridad (1 primero, 3 último).
+     *
+     * @param mensajes la lista de mensajes a ordenar
+     * @return PriorityQueue con los mensajes ordenados por prioridad
+     */
+    public PriorityQueue<Mensaje> ordenarPorPrioridad(LinkedList<Mensaje> mensajes) {
+        PriorityQueue<Mensaje> ordenados = new PriorityQueue<>(
+                (a, b) -> a.getPrioridad() - b.getPrioridad()
+        );
+        ordenados.addAll(mensajes);
+        return ordenados;
+    }
+
+    /**
+     * Reconstruye el mensaje con el ID indicado y lo elimina de la red.
+     * Solo reconstruye si el mensaje está completo.
      *
      * @param id el ID del mensaje a reconstruir
-     * @param mensajes la lista de mensajes que contienen los paquetes
-     * @return el mensaje reconstruido en orden, o un mensaje de error si está incompleto
+     * @param red la red de la cual extraer y eliminar el mensaje
+     * @return el contenido del mensaje reconstruido, o null si no está completo o no existe
      */
-    public String reconstruir(int id, LinkedList<Mensaje> mensajes) {
-        LinkedList<Paquete> resultado = separarPorMensaje(id, mensajes);
+    public String reconstruir(int id, Red red) {
+        LinkedList<Mensaje> mensajes = red.getMensajes();
 
-        if (resultado.isEmpty() || resultado.size() != resultado.get(0).getCantPaquetes()) {
-            return "No se puede reconstruir el mensaje ";
+        if (!estaCompleto(id, mensajes)) {
+            return null;
         }
+
+        LinkedList<Paquete> resultado = separarPorMensaje(id, mensajes);
 
         // Ordena los paquetes por número usando una PriorityQueue
         PriorityQueue<Paquete> ordenado = new PriorityQueue<>((a, b) -> a.getNumero() - b.getNumero());
@@ -97,6 +109,44 @@ public class Reconstructor {
             rec.append(ordenado.poll().getContenido());
         }
 
+        // Eliminar el mensaje de la red tras reconstruirlo
+        red.eliminarMensaje(id);
+
         return rec.toString();
+    }
+
+    /**
+     * Reconstruye el mensaje completo con prioridad más alta que esté hace más tiempo en la red.
+     * Si hay varios mensajes con la misma prioridad, gana el que se creó primero.
+     * Una vez reconstruido, el mensaje se elimina de la red.
+     *
+     * @param red la red de la cual extraer y reconstruir el siguiente mensaje
+     * @return texto formateado con el mensaje reconstruido, o null si no hay completos
+     */
+    public String reconstruirSiguiente(Red red) {
+        LinkedList<Mensaje> mensajes = red.getMensajes();
+        if (mensajes.isEmpty()) {
+            return null;
+        }
+
+        // Buscar mensaje completo con mayor prioridad, priorizando el más antiguo
+        Mensaje elegido = null;
+        for (Mensaje m : mensajes) {
+            if (estaCompleto(m.getIdMensaje(), mensajes)) {
+                if (elegido == null || m.getPrioridad() < elegido.getPrioridad()) {
+                    elegido = m;
+                }
+            }
+        }
+
+        if (elegido == null) {
+            return null;
+        }
+
+        int id = elegido.getIdMensaje();
+        int prioridad = elegido.getPrioridad();
+        String contenido = reconstruir(id, red);
+
+        return "Mensaje: " + id + " | Prioridad: " + prioridad + "\n" + contenido;
     }
 }

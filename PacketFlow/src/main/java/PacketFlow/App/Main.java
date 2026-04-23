@@ -2,6 +2,7 @@ package PacketFlow.App;
 
 import PacketFlow.*;
 
+import java.util.PriorityQueue;
 import java.util.Scanner;
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -14,8 +15,8 @@ import java.util.LinkedList;
  * Proporciona la interfaz de usuario para el simulador PacketFlow.
  * Implementa un menú interactivo que permite:
  * - Crear mensajes manualmente o cargar desde CSV
- * - Enviar y recibir paquetes
- * - Reconstruir mensajes
+ * - Enviar paquetes (todos o de un mensaje específico)
+ * - Reconstruir mensajes (siguiente automático, o por ID)
  * - Consultar estado de la red
  *
  * Reglas de validación:
@@ -23,14 +24,13 @@ import java.util.LinkedList;
  * - IDs de mensajes deben ser > 0 y únicos
  * - Prioridad debe estar entre 1 y 3 (1 = más prioritario, 3 = menos prioritario)
  * - Contenido no puede estar vacío
- * - La red no puede saturarse (se valida capacidad antes de crear mensajes)
+ * - La red no puede saturarse
  */
 public class Main {
     private static Red red;
     private static Scanner sc;
     private static Reconstructor reconstructor;
 
-    // Constantes de validación
     private static final int PRIORIDAD_MIN = 1;
     private static final int PRIORIDAD_MAX = 3;
 
@@ -38,10 +38,8 @@ public class Main {
         sc = new Scanner(System.in);
         reconstructor = new Reconstructor();
 
-        // Inicializar la red
         inicializarRed(sc);
 
-        // Menú principal
         int opcion;
         do {
             mostrarMenu();
@@ -58,10 +56,10 @@ public class Main {
                     enviarPaquetesDeMensaje(sc);
                     break;
                 case 4:
-                    recibirPaquete();
+                    reconstruirSiguiente();
                     break;
                 case 5:
-                    reconstruirMensaje(sc);
+                    reconstruirPorId(sc);
                     break;
                 case 6:
                     listarEstado();
@@ -82,7 +80,6 @@ public class Main {
 
     /**
      * Inicializa la red solicitando capacidad y tamaño máximo de paquete.
-     * Valida que ambos valores sean enteros positivos
      */
     private static void inicializarRed(Scanner scanner) {
         System.out.println("\n!Bienvenido a PacketFlow¡ Necesitamos que inicialize la red para comenzar la prueba.\n");
@@ -107,10 +104,10 @@ public class Main {
         System.out.println("1. Crear mensaje manualmente");
         System.out.println("2. Enviar todos los paquetes");
         System.out.println("3. Enviar paquetes de un mensaje específico");
-        System.out.println("4. Enviar un paquete especifico");
-        System.out.println("5. Reconstruir mensaje");
+        System.out.println("4. Reconstruir el mensaje de mayor prioridad y antiguedad en la red");
+        System.out.println("5. Reconstruir mensaje por ID");
         System.out.println("6. Consultar estado de la red");
-        System.out.println("7. Cargar mensajes desde CSV");
+        System.out.println("7. Cargar mensajes desde CSV (existe el archivo mensajes.csv de prueba)");
         System.out.println("8. Salir");
         System.out.print("\nSelecciona una opción: ");
     }
@@ -130,7 +127,7 @@ public class Main {
     }
 
     /**
-     * Lee un entero positivo del scanner, validando hasta que el usuario ingrese un valor válido.
+     * Lee un entero positivo del scanner.
      */
     private static int leerEnteroPositivo(Scanner scanner, String prompt, String mensajeError) {
         int valor;
@@ -151,7 +148,7 @@ public class Main {
     }
 
     /**
-     * Lee un entero dentro de un rango, validando hasta que el usuario ingrese un valor válido.
+     * Lee un entero dentro de un rango.
      */
     private static int leerEnteroEnRango(Scanner scanner, String prompt, int min, int max) {
         int valor;
@@ -173,7 +170,6 @@ public class Main {
 
     /**
      * Crea un mensaje manualmente solicitando datos al usuario.
-     * Valida ID, prioridad, contenido no vacío y capacidad de la red.
      */
     private static void crearMensajeManual(Scanner scanner) {
         System.out.println("\nCrear Mensaje\n");
@@ -232,7 +228,6 @@ public class Main {
 
     /**
      * Envía paquetes de un mensaje específico.
-     * Valida que el mensaje exista antes de proceder.
      */
     private static void enviarPaquetesDeMensaje(Scanner scanner) {
         System.out.println("\nEnviar paquetes de un mensaje\n");
@@ -270,19 +265,30 @@ public class Main {
     }
 
     /**
-     * Recibe un paquete de la cola de tránsito.
+     * Reconstruye el siguiente mensaje (mayor prioridad + más antiguo) y lo elimina.
      */
-    private static void recibirPaquete() {
-        System.out.println();
-        red.recibirPaquete();
+    private static void reconstruirSiguiente() {
+        System.out.println("\nReconstruir siguiente mensaje\n");
+
+        if (red.getMensajes().isEmpty()) {
+            System.out.println("No hay mensajes en la red.");
+            return;
+        }
+
+        String resultado = reconstructor.reconstruirSiguiente(red);
+
+        if (resultado == null) {
+            System.out.println("No hay mensajes completos disponibles para reconstruir.");
+        } else {
+            System.out.println(resultado);
+        }
     }
 
     /**
-     * Reconstruye un mensaje a partir de los paquetes recibidos.
-     * Valida que el mensaje exista antes de intentar reconstruirlo.
+     * Reconstruye un mensaje específico por ID y lo elimina de la red.
      */
-    private static void reconstruirMensaje(Scanner scanner) {
-        System.out.println("\nReconstruir Mensaje\n");
+    private static void reconstruirPorId(Scanner scanner) {
+        System.out.println("\nReconstruir mensaje por ID\n");
 
         if (red.getMensajes().isEmpty()) {
             System.out.println("Error: No hay mensajes en la red.");
@@ -297,9 +303,14 @@ public class Main {
             return;
         }
 
-        String resultado = reconstructor.reconstruir(id, red.getMensajes());
-        System.out.println("\nMensaje reconstruido:");
-        System.out.println(resultado);
+        String resultado = reconstructor.reconstruir(id, red);
+
+        if (resultado == null) {
+            System.out.println("No se puede reconstruir el mensaje " + id + ": está incompleto.");
+        } else {
+            System.out.println("\nMensaje reconstruido:");
+            System.out.println(resultado);
+        }
     }
 
     /**
@@ -317,7 +328,9 @@ public class Main {
             return;
         }
 
-        for (Mensaje m : mensajes) {
+        PriorityQueue<Mensaje> ordenados = reconstructor.ordenarPorPrioridad(mensajes);
+        while (!ordenados.isEmpty()) {
+            Mensaje m = ordenados.poll();
             boolean completo = reconstructor.estaCompleto(m.getIdMensaje(), mensajes);
             String estado = completo ? "COMPLETO" : "INCOMPLETO";
             int recibidos = 0;
@@ -336,11 +349,6 @@ public class Main {
     /**
      * Carga mensajes desde un archivo CSV.
      * Formato esperado: ID,CONTENIDO,PRIORIDAD
-     * Aplica las mismas validaciones que la creación manual:
-     * - ID positivo y único
-     * - Prioridad entre 1 y 3
-     * - Contenido no vacío
-     * - Capacidad de la red
      */
     private static void cargarCSV(Scanner scanner) {
         System.out.println("\nCargar archivo\n");
@@ -388,7 +396,7 @@ public class Main {
                         continue;
                     }
                     if (contenido.isEmpty()) {
-                        System.out.println("Línea " + numeroLinea + " ignorada motivo: contevido vacio : " + linea);
+                        System.out.println("Línea " + numeroLinea + " ignorada motivo: contenido vacio : " + linea);
                         contadorIgnorados++;
                         continue;
                     }

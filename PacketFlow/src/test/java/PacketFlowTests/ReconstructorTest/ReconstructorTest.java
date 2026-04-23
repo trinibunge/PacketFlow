@@ -1,321 +1,314 @@
 package PacketFlowTests.ReconstructorTest;
 
-import PacketFlow.EstadoPaquete;
-import PacketFlow.Mensaje;
-import PacketFlow.Paquete;
-import PacketFlow.Reconstructor;
-import org.junit.jupiter.api.BeforeEach;
+import PacketFlow.*;
 import org.junit.jupiter.api.Test;
+
 import java.util.LinkedList;
+import java.util.PriorityQueue;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Clase ReconstructorTest
  *
- * tests para validar la correcta reconstrucción de mensajes a partir de paquetes recibidos.
- * Verifica que el Reconstructor pueda separar paquetes por mensaje, validar completitud,
- * y reconstruir mensajes en el orden correcto incluso cuando los paquetes llegan desordenados.
+ * Tests para validar el funcionamiento correcto de la clase Reconstructor.
+ * Verifica la separación de paquetes, la validación de completitud, la reconstrucción
+ * de mensajes por ID y siguiente automático y el ordenamiento por prioridad.
  *
  * Métodos testados:
- * - separarPorMensaje: filtra paquetes por ID de mensaje
- * - estaCompleto: valida que todos los paquetes de un mensaje hayan sido recibidos
- * - reconstruir: reconstruye el mensaje original ordenando los paquetes
- *
- * Casos probados:
- * - Separación correcta de paquetes recibidos
- * - Manejo de IDs inexistentes
- * - Prevención de mezcla de mensajes
- * - Validación de completitud en diferentes escenarios
- * - Reconstrucción con paquetes en orden
- * - Reconstrucción con paquetes desordenados
- * - Manejo de mensajes incompletos
- * - Caso borde: un solo paquete
+ * - separarPorMensaje: filtra paquetes RECIBIDOS de un mensaje específico
+ * - estaCompleto: verifica si todos los paquetes fueron recibidos
+ * - reconstruir: reconstruye un mensaje y lo elimina de la red
+ * - reconstruirSiguiente: reconstruye el mensaje de mayor prioridad y antigüedad
+ * - ordenarPorPrioridad: ordena mensajes por prioridad
  */
-class ReconstructorTest {
-
-    private Reconstructor reconstructor;
-    private LinkedList<Mensaje> mensajes;
+public class ReconstructorTest {
 
     /**
-     * Configuración previa para cada test.
-     * Inicializa una nueva instancia del Reconstructor y una lista vacía de mensajes.
+     * Helper: marca todos los paquetes de un mensaje como RECIBIDO.
      */
-    @BeforeEach
-    void setUp() {
-        reconstructor = new Reconstructor();
-        mensajes = new LinkedList<>();
+    private void recibirTodos(Red red, int idMensaje) {
+        Mensaje m = red.buscarMensaje(idMensaje);
+        for (Paquete p : m.getPaquetes()) {
+            p.setEstado(EstadoPaquete.RECIBIDO);
+            red.getEnTransito().remove(p);
+        }
     }
 
-    // SEPARARPORMENSAJE:
-
+    // TESTS DE estaCompleto()
     /**
-     * Test: Separar Devuelve Solo Paquetes Recibidos
-     *
-     * Objetivo del test: verificar que separarPorMensaje solo devuelve paquetes
-     * con estado RECIBIDO, filtrando correctamente.
-     *
-     * Validaciones:
-     * - Se devuelven solo los 2 paquetes marcados como RECIBIDO
-     * - Los paquetes sin estado RECIBIDO no se incluyen
+     * Test: Mensaje Sin Paquetes Recibidos No Está Completo
      */
     @Test
-    void testSepararDevuelveSoloPaquetesRecibidos() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1);
-        m.fragmentar("HolaMundo", 4);
-
-        LinkedList<Paquete> paquetes = new LinkedList<>(m.getPaquetes());
-        paquetes.get(0).setEstado(EstadoPaquete.RECIBIDO);
-        paquetes.get(1).setEstado(EstadoPaquete.RECIBIDO);
-
-        mensajes.add(m);
-
-        LinkedList<Paquete> resultado = reconstructor.separarPorMensaje(1, mensajes);
-        assertEquals(2, resultado.size());
+    void testMensajeSinPaquetesRecibidosNoEstaCompleto() {
+        Red red = new Red(2, 10);
+        red.crearMensaje(1, "Hola", 1);
+        Reconstructor r = new Reconstructor();
+        assertFalse(r.estaCompleto(1, red.getMensajes()));
     }
 
     /**
-     * Test: Separar ID Inexistente Devuelve Vacío
-     *
-     * Objetivo del test: verificar que si el ID de mensaje no existe,
-     * devuelve una lista vacía.
-     *
-     * Validaciones:
-     * - La lista resultado está vacía cuando se busca un ID inexistente
+     * Test: Mensaje Con Todos Los Paquetes Recibidos Está Completo
      */
     @Test
-    void testSepararIdInexistenteDevuelveVacio() {
-        Mensaje m = new Mensaje(1, "Hola", 1);
-        m.fragmentar("Hola", 4);
+    void testMensajeCompletoEstaCompleto() {
+        Red red = new Red(2, 10);
+        red.crearMensaje(1, "Hola", 1);
+        recibirTodos(red, 1);
+        Reconstructor r = new Reconstructor();
+        assertTrue(r.estaCompleto(1, red.getMensajes()));
+    }
 
-        mensajes.add(m);
+    /**
+     * Test: Mensaje Con Algunos Paquetes Recibidos No Está Completo
+     */
+    @Test
+    void testMensajeIncompletoNoEstaCompleto() {
+        Red red = new Red(1, 10);
+        red.crearMensaje(1, "abcd", 1); // 4 paquetes
+        // Recibir solo 2
+        Mensaje m = red.buscarMensaje(1);
+        int contador = 0;
+        for (Paquete p : m.getPaquetes()) {
+            if (contador < 2) {
+                p.setEstado(EstadoPaquete.RECIBIDO);
+                contador++;
+            }
+        }
+        Reconstructor r = new Reconstructor();
+        assertFalse(r.estaCompleto(1, red.getMensajes()));
+    }
 
-        LinkedList<Paquete> resultado = reconstructor.separarPorMensaje(99, mensajes);
+    // TESTS DE separarPorMensaje()
+
+    /**
+     * Test: Separar Por Mensaje Devuelve Solo Paquetes Recibidos
+     */
+    @Test
+    void testSepararPorMensajeSoloRecibidos() {
+        Red red = new Red(1, 10);
+        red.crearMensaje(1, "abc", 1); // 3 paquetes
+        // Recibir solo 1
+        Mensaje m = red.buscarMensaje(1);
+        m.getPaquetes().peek().setEstado(EstadoPaquete.RECIBIDO);
+
+        Reconstructor r = new Reconstructor();
+        LinkedList<Paquete> resultado = r.separarPorMensaje(1, red.getMensajes());
+        assertEquals(1, resultado.size());
+    }
+
+    /**
+     * Test: Separar Por Mensaje Inexistente Devuelve Lista Vacía
+     */
+    @Test
+    void testSepararPorMensajeInexistenteVacio() {
+        Red red = new Red(2, 10);
+        Reconstructor r = new Reconstructor();
+        LinkedList<Paquete> resultado = r.separarPorMensaje(99, red.getMensajes());
         assertTrue(resultado.isEmpty());
     }
 
+    // TESTS DE reconstruir()
+
     /**
-     * Test: Separar No Mezcla Otros Mensajes
-     *
-     * Objetivo del test: verificar que no mezcla paquetes de diferentes mensajes
-     * cuando hay múltiples mensajes en la lista.
-     *
-     * Validaciones:
-     * - Solo se devuelven paquetes del mensaje solicitado
-     * - Todos los paquetes resultado tienen el ID correcto
-     * - No hay contaminación cruzada entre mensajes
+     * Test: Reconstruir Mensaje Completo Devuelve Contenido Original
      */
     @Test
-    void testSepararNoMezclaOtrosMensajes() {
-        Mensaje m1 = new Mensaje(1, "Hola", 1);
-        Mensaje m2 = new Mensaje(2, "Mundo", 1);
+    void testReconstruirMensajeCompleto() {
+        Red red = new Red(3, 10);
+        red.crearMensaje(1, "Hola Mundo", 1);
+        recibirTodos(red, 1);
 
-        m1.fragmentar("Hola", 4);
-        m2.fragmentar("Mundo", 4);
-
-        for (Paquete p : m1.getPaquetes()) p.setEstado(EstadoPaquete.RECIBIDO);
-        for (Paquete p : m2.getPaquetes()) p.setEstado(EstadoPaquete.RECIBIDO);
-
-        mensajes.add(m1);
-        mensajes.add(m2);
-
-        LinkedList<Paquete> resultado = reconstructor.separarPorMensaje(1, mensajes);
-
-        for (Paquete p : resultado)
-            assertEquals(1, p.getIdMensaje());
-    }
-
-    // ESTACOMPLETO:
-    /**
-     * Test: Esta Completo Todos Recibidos
-     *
-     * Objetivo del test: verificar que estaCompleto retorna true cuando
-     * todos los paquetes del mensaje están en estado RECIBIDO.
-     *
-     * Validaciones:
-     * - Retorna true cuando todos los paquetes están recibidos
-     */
-    @Test
-    void testEstaCompletoTodosRecibidos() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1);
-        m.fragmentar("HolaMundo", 4);
-
-        for (Paquete p : m.getPaquetes())
-            p.setEstado(EstadoPaquete.RECIBIDO);
-
-        mensajes.add(m);
-
-        assertTrue(reconstructor.estaCompleto(1, mensajes));
+        Reconstructor r = new Reconstructor();
+        String resultado = r.reconstruir(1, red);
+        assertEquals("Hola Mundo", resultado);
     }
 
     /**
-     * Test: Esta Completo Falta Un Paquete
-     *
-     * Objetivo del test: verificar que estaCompleto retorna false
-     * cuando faltan paquetes por recibir.
-     *
-     * Validaciones:
-     * - Retorna false cuando hay paquetes sin estado RECIBIDO
+     * Test: Reconstruir Mensaje Elimina De La Red
      */
     @Test
-    void testEstaCompletoFaltaUnPaquete() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1);
-        m.fragmentar("HolaMundo", 4);
+    void testReconstruirEliminaDeRed() {
+        Red red = new Red(3, 10);
+        red.crearMensaje(1, "Hola", 1);
+        recibirTodos(red, 1);
 
-        LinkedList<Paquete> paquetes = new LinkedList<>(m.getPaquetes());
-        paquetes.get(0).setEstado(EstadoPaquete.RECIBIDO);
-        paquetes.get(1).setEstado(EstadoPaquete.RECIBIDO);
-
-        mensajes.add(m);
-
-        assertFalse(reconstructor.estaCompleto(1, mensajes));
+        Reconstructor r = new Reconstructor();
+        r.reconstruir(1, red);
+        assertNull(red.buscarMensaje(1));
     }
 
     /**
-     * Test: Esta Completo Sin Paquetes Recibidos
-     *
-     * Objetivo del test: verificar que estaCompleto retorna false
-     * cuando ningún paquete ha sido recibido.
-     *
-     * Validaciones:
-     * - Retorna false cuando todos los paquetes están sin recibir
+     * Test: Reconstruir Mensaje Incompleto Retorna Null
      */
     @Test
-    void testEstaCompletoSinPaquetesRecibidos() {
-        Mensaje m = new Mensaje(1, "Hola", 1);
-        m.fragmentar("Hola", 4);
+    void testReconstruirIncompletoRetornaNull() {
+        Red red = new Red(2, 10);
+        red.crearMensaje(1, "Hola Mundo", 1);
+        // No recibir ningún paquete
 
-        mensajes.add(m);
-
-        assertFalse(reconstructor.estaCompleto(1, mensajes));
+        Reconstructor r = new Reconstructor();
+        assertNull(r.reconstruir(1, red));
     }
 
     /**
-     * Test: Esta Completo ID Inexistente
-     *
-     * Objetivo del test: verificar que estaCompleto retorna false
-     * cuando el ID de mensaje no existe.
-     *
-     * Validaciones:
-     * - Retorna false cuando se consulta un ID inexistente
+     * Test: Reconstruir Mensaje Incompleto No Lo Elimina
      */
     @Test
-    void testEstaCompletoIdInexistente() {
-        assertFalse(reconstructor.estaCompleto(99, mensajes));
-    }
+    void testReconstruirIncompletoNoElimina() {
+        Red red = new Red(2, 10);
+        red.crearMensaje(1, "Hola Mundo", 1);
 
-    // RECONSTRUIR:
-
-    /**
-     * Test: Reconstruir Orden Correcto
-     *
-     * Objetivo del test: verificar que reconstruir devuelve el mensaje original
-     * cuando los paquetes están en orden secuencial.
-     *
-     * Validaciones:
-     * - El mensaje reconstruido es idéntico al original
-     * - El orden de los paquetes se respeta
-     */
-    @Test
-    void testReconstruirOrdenCorrecto() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1);
-        m.fragmentar("HolaMundo", 4);
-
-        for (Paquete p : m.getPaquetes())
-            p.setEstado(EstadoPaquete.RECIBIDO);
-
-        mensajes.add(m);
-
-        String resultado = reconstructor.reconstruir(1, mensajes);
-        assertEquals("HolaMundo", resultado);
+        Reconstructor r = new Reconstructor();
+        r.reconstruir(1, red);
+        assertNotNull(red.buscarMensaje(1));
     }
 
     /**
-     * Test: Reconstruir Paquetes Desordenados
+     * Test: Reconstruir Conserva El Orden De Los Paquetes
      *
-     * Objetivo del test: verificar que reconstruir devuelve el mensaje original
-     * incluso cuando los paquetes llegan fuera de orden.
-     *
-     * Validaciones:
-     * - El metodo ordena correctamente los paquetes
-     * - El mensaje reconstruido es idéntico al original
-     * - La reordenación es transparente para el usuario
+     * Aunque internamente la PriorityQueue puede reordenar paquetes por prioridad,
+     * la reconstrucción debe ordenarlos por número de paquete.
      */
     @Test
-    void testReconstruirPaquetesDesordenados() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1);
-        m.fragmentar("HolaMundo", 4);
+    void testReconstruirConservaOrden() {
+        Red red = new Red(2, 10);
+        red.crearMensaje(1, "ABCDEF", 1);
+        recibirTodos(red, 1);
 
-        LinkedList<Paquete> paquetes = new LinkedList<>(m.getPaquetes());
+        Reconstructor r = new Reconstructor();
+        String resultado = r.reconstruir(1, red);
+        assertEquals("ABCDEF", resultado);
+    }
 
-        for (int i = paquetes.size() - 1; i >= 0; i--)
-            paquetes.get(i).setEstado(EstadoPaquete.RECIBIDO);
+    // TESTS DE reconstruirSiguiente()
 
-        mensajes.add(m);
-
-        String resultado = reconstructor.reconstruir(1, mensajes);
-        assertEquals("HolaMundo", resultado);
+    /**
+     * Test: Reconstruir Siguiente Sin Mensajes Devuelve Null
+     */
+    @Test
+    void testReconstruirSiguienteSinMensajesNull() {
+        Red red = new Red(2, 10);
+        Reconstructor r = new Reconstructor();
+        assertNull(r.reconstruirSiguiente(red));
     }
 
     /**
-     * Test: Reconstruir Incompleto
-     *
-     * Objetivo del test: verificar que reconstruir retorna un mensaje de error
-     * cuando faltan paquetes del mensaje.
-     *
-     * Validaciones:
-     * - No intenta reconstruir un mensaje incompleto
-     * - Devuelve un mensaje de error descriptivo
+     * Test: Reconstruir Siguiente Sin Mensajes Completos Devuelve Null
      */
     @Test
-    void testReconstruirIncompleto() {
-        Mensaje m = new Mensaje(1, "HolaMundo", 1);
-        m.fragmentar("HolaMundo", 4);
+    void testReconstruirSiguienteSinCompletosNull() {
+        Red red = new Red(2, 10);
+        red.crearMensaje(1, "Hola", 1);
+        red.crearMensaje(2, "Chau", 2);
+        // No recibir ninguno
 
-        LinkedList<Paquete> paquetes = new LinkedList<>(m.getPaquetes());
-        paquetes.get(0).setEstado(EstadoPaquete.RECIBIDO);
-
-        mensajes.add(m);
-
-        String resultado = reconstructor.reconstruir(1, mensajes);
-        assertTrue(resultado.contains("No se puede reconstruir"));
+        Reconstructor r = new Reconstructor();
+        assertNull(r.reconstruirSiguiente(red));
     }
 
     /**
-     * Test: Reconstruir Mensaje Vacío
+     * Test: Reconstruir Siguiente Elige El De Mayor Prioridad
      *
-     * Objetivo del test: verificar que reconstruir retorna un mensaje de error
-     * cuando el ID del mensaje no existe.
-     *
-     * Validaciones:
-     * - Devuelve mensaje de error cuando el ID es inexistente
-     * - No intenta reconstruir un mensaje que no existe
+     * Si hay un mensaje de prioridad 1 y otro de prioridad 3, ambos completos,
+     * debe reconstruir primero el de prioridad 1.
      */
     @Test
-    void testReconstruirMensajeVacio() {
-        String resultado = reconstructor.reconstruir(99, mensajes);
-        assertTrue(resultado.contains("No se puede reconstruir"));
+    void testReconstruirSiguienteEligeMayorPrioridad() {
+        Red red = new Red(3, 20);
+        red.crearMensaje(1, "Baja", 3);
+        red.crearMensaje(2, "Alta", 1);
+        recibirTodos(red, 1);
+        recibirTodos(red, 2);
+
+        Reconstructor r = new Reconstructor();
+        String resultado = r.reconstruirSiguiente(red);
+        assertTrue(resultado.contains("Mensaje 2"));
+        assertTrue(resultado.contains("Alta"));
     }
 
     /**
-     * Test: Reconstruir Un Solo Paquete
-     *
-     * Objetivo del test: verificar que reconstruir funciona correctamente
-     * cuando el mensaje completo cabe en un solo paquete.
-     *
-     * Validaciones:
-     * - El mensaje se reconstruye correctamente cuando hay un solo paquete
-     * - No hay problemas de fragmentación en este caso especial
+     * Test: Reconstruir Siguiente Entre Iguales Prioridades Elige El Mas Antiguo
      */
     @Test
-    void testReconstruirUnSoloPaquete() {
-        Mensaje m = new Mensaje(1, "Hola", 1);
-        m.fragmentar("Hola", 100);
+    void testReconstruirSiguienteEligeMasAntiguo() {
+        Red red = new Red(3, 20);
+        red.crearMensaje(1, "Primero", 2);
+        red.crearMensaje(2, "Segundo", 2);
+        recibirTodos(red, 1);
+        recibirTodos(red, 2);
 
-        for (Paquete p : m.getPaquetes())
-            p.setEstado(EstadoPaquete.RECIBIDO);
+        Reconstructor r = new Reconstructor();
+        String resultado = r.reconstruirSiguiente(red);
+        assertTrue(resultado.contains("Mensaje 1"));
+        assertTrue(resultado.contains("Primero"));
+    }
 
-        mensajes.add(m);
+    /**
+     * Test: Reconstruir Siguiente Elimina El Mensaje De La Red
+     */
+    @Test
+    void testReconstruirSiguienteEliminaDeRed() {
+        Red red = new Red(3, 10);
+        red.crearMensaje(1, "Hola", 1);
+        recibirTodos(red, 1);
 
-        assertEquals("Hola", reconstructor.reconstruir(1, mensajes));
+        Reconstructor r = new Reconstructor();
+        r.reconstruirSiguiente(red);
+        assertNull(red.buscarMensaje(1));
+    }
+
+    /**
+     * Test: Llamadas Sucesivas a Siguiente Procesan Por Prioridad
+     */
+    @Test
+    void testReconstruirSiguienteSucesivo() {
+        Red red = new Red(3, 30);
+        red.crearMensaje(1, "Tres", 3);
+        red.crearMensaje(2, "Uno", 1);
+        red.crearMensaje(3, "Dos", 2);
+        recibirTodos(red, 1);
+        recibirTodos(red, 2);
+        recibirTodos(red, 3);
+
+        Reconstructor r = new Reconstructor();
+        String r1 = r.reconstruirSiguiente(red);
+        String r2 = r.reconstruirSiguiente(red);
+        String r3 = r.reconstruirSiguiente(red);
+
+        assertTrue(r1.contains("Uno"));   // prioridad 1
+        assertTrue(r2.contains("Dos"));   // prioridad 2
+        assertTrue(r3.contains("Tres"));  // prioridad 3
+    }
+
+    // TESTS DE ordenarPorPrioridad()
+
+    /**
+     * Test: Ordenar Por Prioridad Devuelve Mensajes en Orden Correcto
+     */
+    @Test
+    void testOrdenarPorPrioridad() {
+        Red red = new Red(3, 30);
+        red.crearMensaje(1, "Baja", 3);
+        red.crearMensaje(2, "Alta", 1);
+        red.crearMensaje(3, "Media", 2);
+
+        Reconstructor r = new Reconstructor();
+        PriorityQueue<Mensaje> ordenados = r.ordenarPorPrioridad(red.getMensajes());
+
+        assertEquals(1, ordenados.poll().getPrioridad());
+        assertEquals(2, ordenados.poll().getPrioridad());
+        assertEquals(3, ordenados.poll().getPrioridad());
+    }
+
+    /**
+     * Test: Ordenar Por Prioridad Con Lista Vacía Devuelve Cola Vacía
+     */
+    @Test
+    void testOrdenarPorPrioridadVacia() {
+        Red red = new Red(2, 10);
+        Reconstructor r = new Reconstructor();
+        PriorityQueue<Mensaje> ordenados = r.ordenarPorPrioridad(red.getMensajes());
+        assertTrue(ordenados.isEmpty());
     }
 }
