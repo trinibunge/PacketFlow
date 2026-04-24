@@ -1,7 +1,7 @@
 package PacketFlow;
 
-import java.util.Queue;
-import java.util.ArrayDeque;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Clase Mensaje
@@ -16,13 +16,13 @@ import java.util.ArrayDeque;
  * - Prioridad del mensaje
  *
  * Salidas:
- * - Cola de paquetes generados tras la fragmentación
+ * - Lista de paquetes generados tras la fragmentación
  * - Información del mensaje
  */
 public class Mensaje {
 
     private int idMensaje;
-    private Queue<Paquete> paquetes;
+    private List<Paquete> paquetes;
     private int prioridad;
     private String contenido;
 
@@ -37,7 +37,7 @@ public class Mensaje {
     public Mensaje(int idMensaje, String contenido, int prioridad) {
         this.idMensaje = idMensaje;
         this.prioridad = prioridad;
-        this.paquetes = new ArrayDeque<>();
+        this.paquetes = new ArrayList<>();
         this.contenido = contenido;
     }
 
@@ -58,10 +58,10 @@ public class Mensaje {
     }
 
     /**
-     * Obtiene la cola de paquetes del mensaje.
-     * @return Queue con todos los paquetes generados
+     * Obtiene la lista de paquetes del mensaje.
+     * @return List con todos los paquetes generados
      */
-    public Queue<Paquete> getPaquetes() {
+    public List<Paquete> getPaquetes() {
         return paquetes;
     }
 
@@ -92,12 +92,11 @@ public class Mensaje {
     /**
      * Fragmenta el mensaje en múltiples paquetes según el tamaño máximo permitido.
      * Calcula la cantidad de paquetes necesarios y divide el contenido de forma equitativa.
-     * Cada paquete creado se agrega a la cola y mantiene referencia al mensaje original.
+     * Cada paquete creado se agrega a la lista y mantiene referencia al mensaje original.
      *
-     * @param contenido el contenido textual a fragmentar
      * @param tamanio el tamaño máximo permitido para cada paquete en caracteres.
      */
-    public void fragmentar(String contenido, int tamanio) {
+    public void fragmentar(int tamanio) {
         // Calcula la cantidad de paquetes necesarios redondeando hacia arriba
         int cantPaquetes = (int) Math.ceil((double) contenido.length() / tamanio);
 
@@ -113,14 +112,14 @@ public class Mensaje {
             // Crea el paquete con toda la información necesaria
             Paquete paq = new Paquete(
                     idMensaje,           // ID del mensaje
-                    i + 1,               // Número de paquete (comenzando en 1)
+                    i + 1,               // Número de paquete
                     cantPaquetes,        // Cantidad total de paquetes
                     frag,                // Contenido del fragmento
                     EstadoPaquete.EN_TRANSITO, // Estado inicial
                     this                 // Referencia al mensaje original
             );
 
-            // Agrega el paquete a la cola
+            // Agrega el paquete a la lista
             paquetes.add(paq);
         }
     }

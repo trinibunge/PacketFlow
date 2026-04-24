@@ -54,17 +54,9 @@ public class Reconstructor {
      */
     public boolean estaCompleto(int id, LinkedList<Mensaje> mensajes) {
         LinkedList<Paquete> resultado = separarPorMensaje(id, mensajes);
-
-        if (resultado.isEmpty()) {
-            return false;
-        }
-        else if (resultado.size() == resultado.get(0).getCantPaquetes()) {
-            return true;
-        }
-        else {
-            return false;
-        }
+        return !resultado.isEmpty() && resultado.size() == resultado.get(0).getCantPaquetes();
     }
+
 
     /**
      * Devuelve los mensajes ordenados por prioridad (1 primero, 3 último).

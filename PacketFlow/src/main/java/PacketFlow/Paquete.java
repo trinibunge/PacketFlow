@@ -159,7 +159,7 @@ public class Paquete implements Comparable<Paquete> {
      */
     @Override
     public int compareTo(Paquete otro) {
-        // objetivo del método: ordenar paquetes por prioridad del mensaje (mayor prioridad primero)
-        return otro.getMensaje().getPrioridad() - this.getMensaje().getPrioridad();
+        // objetivo del metodo: ordenar paquetes por prioridad del mensaje
+        return this.getMensaje().getPrioridad() - otro.getMensaje().getPrioridad();
     }
 }

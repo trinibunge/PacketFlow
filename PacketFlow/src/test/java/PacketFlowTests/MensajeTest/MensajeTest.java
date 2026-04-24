@@ -136,7 +136,7 @@ public class MensajeTest {
     }
 
     /**
-     * Test: Mensaje Un Solo Paquete (CASO BORDE)
+     * Test: Mensaje Un Solo Paquete
      *
      * Objetivo del test: verificar que cuando el mensaje cabe completamente
      * en un paquete, no se fragmenta y se mantiene intacto.
@@ -151,7 +151,7 @@ public class MensajeTest {
         red.crearMensaje(1, "test", 1);
         Mensaje msj = red.buscarMensaje(1);
         assertEquals(1, msj.getPaquetes().size()); // cantidad de paquetes = 1
-        assertEquals("test", msj.getPaquetes().peek().getContenido()); // contenido del paquete igual que el msj original
+        assertEquals("test", msj.getPaquetes().get(0).getContenido());
     }
 
     /**

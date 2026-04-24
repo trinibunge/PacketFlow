@@ -29,7 +29,7 @@ public class RedTest {
 
     /**
      * Test: Crear Mensaje Exitosamente
-     *
+     * <p>
      * Objetivo: verificar que crearMensaje retorna true cuando hay capacidad
      * y que el mensaje se agrega correctamente a la red.
      */
@@ -44,10 +44,10 @@ public class RedTest {
 
     /**
      * Test: Crear Mensaje Fragmenta Correctamente
-     *
+     * <p>
      * Objetivo: verificar que el contenido se fragmenta en la cantidad correcta
      * de paquetes según el tamaño máximo definido.
-     *
+     * <p>
      * "Hola Mundo" tiene 10 caracteres, con tamaño 3 => 4 paquetes (3+3+3+1)
      */
     @Test
@@ -60,10 +60,10 @@ public class RedTest {
 
     /**
      * Test: Crear Mensaje Falla Cuando No Hay Capacidad
-     *
+     * <p>
      * Objetivo: verificar que crearMensaje retorna false cuando la cantidad
      * de paquetes necesarios excede la capacidad disponible de la red.
-     *
+     * <p>
      * Capacidad 2, tamaño 1, contenido "abcde" => 5 paquetes => no entra
      */
     @Test
@@ -77,7 +77,7 @@ public class RedTest {
 
     /**
      * Test: Crear Mensaje Que Llena Exactamente La Red
-     *
+     * <p>
      * Objetivo: verificar que se puede crear un mensaje cuyos paquetes ocupen
      * exactamente toda la capacidad de la red (caso límite).
      */
@@ -92,7 +92,7 @@ public class RedTest {
 
     /**
      * Test: Segundo Mensaje Es Rechazado Si Excede Capacidad
-     *
+     * <p>
      * Objetivo: verificar que después de cargar un mensaje que casi llena la red,
      * un segundo mensaje que la satura es rechazado.
      */
@@ -153,7 +153,7 @@ public class RedTest {
 
     /**
      * Test: Eliminar Solo Afecta al Mensaje Indicado
-     *
+     * <p>
      * Objetivo: verificar que al eliminar un mensaje, los demás mensajes
      * y sus paquetes permanecen intactos.
      */
@@ -168,19 +168,19 @@ public class RedTest {
         assertTrue(red.getEnTransito().size() > 0);
     }
     // TESTS DE RECEPCIÓN
+
     /**
      * Test: Cambio de Estado a Recibido
      */
     @Test
     void testCambioDeEstadoARecibido() {
-        Red red = new Red(2, 10);
+        Red red = new Red(10, 10);
         red.crearMensaje(2, "Te amo", 2);
         Mensaje msj = red.buscarMensaje(2);
         red.recibirPaquete();
-        Paquete paq = msj.getPaquetes().peek();
+        Paquete paq = msj.getPaquetes().get(0);
         assertEquals(EstadoPaquete.RECIBIDO, paq.getEstado());
     }
-
     /**
      * Test: No Pasa Nada Si No Hay Paquetes y Llamo al Metodo
      */

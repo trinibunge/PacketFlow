@@ -90,7 +90,7 @@ public class ReconstructorTest {
         red.crearMensaje(1, "abc", 1); // 3 paquetes
         // Recibir solo 1
         Mensaje m = red.buscarMensaje(1);
-        m.getPaquetes().peek().setEstado(EstadoPaquete.RECIBIDO);
+        m.getPaquetes().get(0).setEstado(EstadoPaquete.RECIBIDO);
 
         Reconstructor r = new Reconstructor();
         LinkedList<Paquete> resultado = r.separarPorMensaje(1, red.getMensajes());
@@ -223,7 +223,7 @@ public class ReconstructorTest {
 
         Reconstructor r = new Reconstructor();
         String resultado = r.reconstruirSiguiente(red);
-        assertTrue(resultado.contains("Mensaje 2"));
+        assertTrue(resultado.contains("Mensaje: 2"));
         assertTrue(resultado.contains("Alta"));
     }
 
@@ -240,7 +240,7 @@ public class ReconstructorTest {
 
         Reconstructor r = new Reconstructor();
         String resultado = r.reconstruirSiguiente(red);
-        assertTrue(resultado.contains("Mensaje 1"));
+        assertTrue(resultado.contains("Mensaje: 1"));
         assertTrue(resultado.contains("Primero"));
     }
 
