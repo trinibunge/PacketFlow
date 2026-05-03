@@ -17,7 +17,8 @@ lineales (listas, colas y pilas). El objetivo principal es asegurar que, a parti
 correctamente y, en caso afirmativo, reconstruirlo respetando el orden original.
 
 ## Diagrama UML
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/24712fad-8d4b-4519-bee9-b1a037aaa15e" />
+<img width="2000" height="1400" alt="PacketFlow_UML_Diagram" src="https://github.com/user-attachments/assets/5c6b2667-b3e4-4914-94a7-6682a992508c" />
+
 
 
 
