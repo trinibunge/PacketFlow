@@ -17,7 +17,8 @@ lineales (listas, colas y pilas). El objetivo principal es asegurar que, a parti
 correctamente y, en caso afirmativo, reconstruirlo respetando el orden original.
 
 ## Diagrama UML
-<img width="931" height="772" alt="uml proyecto drawio" src="https://github.com/user-attachments/assets/c222d644-8719-418a-ae57-3ffe47a8d1a3" />
+<img width="931" height="772" alt="uml proyecto drawio (1)" src="https://github.com/user-attachments/assets/f8e5b0dd-abcb-4d82-8232-c806e2d90153" />
+
 
 ## Casos de prueba
 1.	Testing
